@@ -1,5 +1,3 @@
-import 'dart:html';
-
 import 'package:flutter/material.dart';
 import 'package:notes/services/note_service.dart';
 import 'package:notes/widgets/note_dialog.dart';
@@ -12,65 +10,23 @@ class NoteListScreen extends StatefulWidget {
 }
 
 class _NoteListScreenState extends State<NoteListScreen> {
+  // final TextEditingController _titleController = TextEditingController();
+  // final TextEditingController _descriptionController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notes'),
       ),
-      body: const NoteList(),
+      body: const NotesList(),
       floatingActionButton: FloatingActionButton(
+        //tmbol + ngambang
         onPressed: () {
           showDialog(
             context: context,
             builder: (context) {
-              return NoteDialog();
-              // return AlertDialog(
-              //   content: Column(
-              //     crossAxisAlignment: CrossAxisAlignment.start,
-              //     children: [
-              //       const Text('Add'),
-              //       const Padding(
-              //         padding: EdgeInsets.only(top: 10),
-              //         child: Text(
-              //           'Title: ',
-              //           textAlign: TextAlign.start,
-              //         ),
-              //       ),
-              //       TextField(
-              //         controller: _titleController,
-              //       ),
-              //       const Padding(
-              //         padding: EdgeInsets.only(top: 20),
-              //         child: Text(
-              //           'Description: ',
-              //         ),
-              //       ),
-              //       TextField(
-              //         controller: _descriptionController,
-              //       ),
-              //     ],
-              //   ),
-              //   actions: [
-              //     Padding(
-              //       padding: const EdgeInsets.symmetric(horizontal: 10),
-              //       child: ElevatedButton(
-              //         onPressed: () {
-              //           Navigator.of(context).pop();
-              //         },
-              //         child: const Text('Cancel'),
-              //       ),
-              //     ),
-              //     ElevatedButton(
-              //       onPressed: () {
-              //         NoteService.addNote(_titleController.text,
-              //                 _descriptionController.text)
-              //             .whenComplete(() => Navigator.of(context).pop());
-              //       },
-              //       child: const Text('Save'),
-              //     ),
-              //   ],
-              // );
+              return const NoteDialog();
             },
           );
         },
@@ -81,12 +37,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
   }
 }
 
-class NoteList extends StatelessWidget {
-  const NoteList({super.key});
+class NotesList extends StatelessWidget {
+  const NotesList({super.key});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
+      // stream: FirebaseFirestore.instance.collection('notes').snapshots(),
       stream: NoteService.getNoteList(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -102,77 +59,74 @@ class NoteList extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 80),
               children: snapshot.data!.map((document) {
                 return Card(
-                  child: ListTile(
+                  child: InkWell(
+                    //dbungkus dgn inkwell biar bs ditap
                     onTap: () {
                       showDialog(
                         context: context,
                         builder: (context) {
-                          // TextEditingController titleController =
-                          //     TextEditingController(text: document['title']);
-                          // TextEditingController descriptionController =
-                          //     TextEditingController(
-                          //         text: document['description']);
                           return NoteDialog(note: document);
-                          // return AlertDialog(
-                          //   title: const Text('Update Notes'),
-                          //   content: Column(
-                          //     crossAxisAlignment: CrossAxisAlignment.start,
-                          //     children: [
-                          //       const Text(
-                          //         'Title: ',
-                          //         textAlign: TextAlign.start,
-                          //       ),
-                          //       TextField(
-                          //         controller: titleController,
-                          //       ),
-                          //       const Padding(
-                          //         padding: EdgeInsets.only(top: 20),
-                          //         child: Text(
-                          //           'Description: ',
-                          //         ),
-                          //       ),
-                          //       TextField(
-                          //         controller: descriptionController,
-                          //       ),
-                          //     ],
-                          //   ),
-                          //   actions: [
-                          //     Padding(
-                          //       padding:
-                          //           const EdgeInsets.symmetric(horizontal: 10),
-                          //       child: ElevatedButton(
-                          //         onPressed: () {
-                          //           Navigator.of(context).pop();
-                          //         },
-                          //         child: const Text('Cancel'),
-                          //       ),
-                          //     ),
-                          //     ElevatedButton(
-                          //       onPressed: () {
-                          //         NoteService.updateNote(
-                          //                 document['id'],
-                          //                 titleController.text,
-                          //                 descriptionController.text)
-                          //             .whenComplete(
-                          //                 () => Navigator.of(context).pop());
-                          //       },
-                          //       child: const Text('Update'),
-                          //     ),
-                          //   ],
-                          // );
                         },
                       );
                     },
-                    title: Text(document['title']),
-                    subtitle: Text(document['description']),
-                    trailing: InkWell(
-                      onTap: () {
-                        NoteService.deleteNote(document['id']);
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Icon(Icons.delete),
-                      ),
+                    child: Column(
+                      children: [
+                        //bs tmpili gbr, bs tdk
+                        document.imageUrl != null &&
+                                Uri.parse(document.imageUrl!).isAbsolute
+                            ? ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(20),
+                                  topRight: Radius.circular(20),
+                                ),
+                                child: Ink.image(
+                                  image: NetworkImage(document.imageUrl!),
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.center,
+                                  width: double.infinity,
+                                  height: 150,),
+                              )
+                            : Container(),
+                        ListTile(
+                          title: Text(document.title),
+                          subtitle: Text(document.description),
+                          trailing: InkWell(
+                            onTap: () {
+                              //pas klik icon trash, ad konfirmasi
+                              showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Confirm Delete'),
+                                    content: Text(
+                                        'Are you sure want to delete this \'${document.title}\'?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          NoteService.deleteNote(document)
+                                              .whenComplete(() =>
+                                                  Navigator.of(context).pop());
+                                          //klo internet putus, jndl ttup
+                                        },
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 10),
+                              child: Icon(Icons.delete),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
