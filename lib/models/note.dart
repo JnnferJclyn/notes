@@ -4,17 +4,21 @@ class Note {
   String? id;
   final String title;
   final String description;
+  String? imageUrl;
+  double? latitude;
+  double? longitude;
   Timestamp? createdAt;
   Timestamp? updatedAt;
-  String? imageUrl;
 
   Note({
     this.id,
     required this.title,
     required this.description,
+    this.imageUrl,
+    this.latitude,
+    this.longitude,
     this.createdAt,
     this.updatedAt,
-    this.imageUrl,
   });
 
   factory Note.fromDocument(DocumentSnapshot doc) {
@@ -23,9 +27,11 @@ class Note {
       id: doc.id,
       title: data['title'],
       description: data['description'],
+      imageUrl: data['image_url'],
+      latitude: data['latitude'] as double,
+      longitude: data['longitude'] as double,
       createdAt: data['created_at'] as Timestamp,
       updatedAt: data['updated_at'] as Timestamp,
-      imageUrl: data['image_url'],
     );
   }
 
@@ -33,9 +39,11 @@ class Note {
     return {
       'title': title,
       'description': description,
+      'image_url': imageUrl,
+      'latitude': latitude,
+      'longitude': longitude,
       'created_at': createdAt,
       'updated_at': updatedAt,
-      'image_url': imageUrl,
     };
   }
 }

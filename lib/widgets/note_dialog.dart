@@ -1,41 +1,37 @@
-
-
-
 import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:notes/models/note.dart';
+import 'package:notes/services/location_service.dart';
 import 'package:notes/services/note_service.dart';
 
-class NoteDialog extends StatefulWidget {
-  //final Map<String, dynamic>? note; //bs null atau tidak = ?
+class NoteEditScreen extends StatefulWidget {
   final Note? note;
-
-  const NoteDialog({super.key, this.note});
+  const NoteEditScreen({super.key, this.note});
 
   @override
-  State<NoteDialog> createState() => _NoteDialogState();
+  State<NoteEditScreen> createState() => _NoteEditScreenState();
 }
 
-class _NoteDialogState extends State<NoteDialog> {
+class _NoteEditScreenState extends State<NoteEditScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   File? _imageFile;
+  Position? _currentPosition;
 
   @override
   void initState() {
     super.initState();
     if (widget.note != null) {
-      //note dkbs akses lgsgkrn pisah class, mk akses pke widget dlu
       _titleController.text = widget.note!.title;
       _descriptionController.text = widget.note!.description;
     }
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker()
-        .pickImage(source: ImageSource.camera); //bs .gallerry
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
@@ -43,89 +39,116 @@ class _NoteDialogState extends State<NoteDialog> {
     }
   }
 
+  Future<void> _pickLocation() async {
+    final currentPosition = await LocationService.getCurrentPosition();
+    // final currentAddress = await LocationService.getAddressFromLatLng(_currentPosition!);
+    setState(() {
+      _currentPosition = currentPosition;
+      // _currentAddress = currentAddress;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    //copy dri note_list_screen : ALertDialog, bs add / update ssuai dmn ditarok jdi buat if
-    //update ssuai id, jdi klo ad input id, brrti update
-    return AlertDialog(
-      title: Text(widget.note == null
-          ? 'Add Notes'
-          : 'Update Notes'), //jika noteId == null maka'Add Notes' jika tidak 'Update Notes'
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Title: ',
-            textAlign: TextAlign.start,
-          ),
-          TextField(
-            controller: _titleController,
-          ),
-          const Padding(
-            padding: EdgeInsets.only(top: 10),
-            child: Text('Description: ', textAlign: TextAlign.start),
-          ),
-          TextField(
-            controller: _descriptionController,
-          ),
-          const Padding(
-            padding: EdgeInsets.only(top: 20),
-            child: Text('Image : '),
-          ),
-          Expanded(
-            child: _imageFile != null
-                ? Image.file(
-                    _imageFile!,
-                    fit: BoxFit.cover,
-                  )
-                : (widget.note?.imageUrl != null &&
-                        Uri.parse(widget.note!.imageUrl!).isAbsolute
-                    ? Image.network(
-                        widget.note!.imageUrl!,
-                        fit: BoxFit.cover,
-                      )
-                    : Container()),
-          ), //img network : klo img ny sdh ad link (sdh prnh diupload), img file : img lokal/dipilih dr galeri
-          TextButton(
-            onPressed: _pickImage,
-            child: const Text('Pick Image'),
-          ),
-        ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.note == null ? 'Add Notes' : 'Update Notes'),
       ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('Cancel'),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Title: ',
+                textAlign: TextAlign.start,
+              ),
+              TextField(
+                controller: _titleController,
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 20),
+                child: Text(
+                  'Description: ',
+                ),
+              ),
+              TextField(
+                controller: _descriptionController,
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 20),
+                child: Text('Image: '),
+              ),
+              _imageFile != null
+                  ? AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Image.file(_imageFile!, fit: BoxFit.cover),
+                    )
+                  : (widget.note?.imageUrl != null &&
+                          Uri.parse(widget.note!.imageUrl!).isAbsolute
+                      ? Image.network(widget.note!.imageUrl!, fit: BoxFit.cover)
+                      : Container()),
+              TextButton(
+                onPressed: _pickImage,
+                child: const Text('Pick Image'),
+              ),
+              TextButton(
+                onPressed: _pickLocation,
+                child: const Text('Get Current Location'),
+              ),
+              Text('LAT: ${_currentPosition?.latitude ?? ""}'),
+              Text('LNG: ${_currentPosition?.longitude ?? ""}'),
+              // Text('ADDRESS: ${_currentAddress ?? ""}'),
+
+              const SizedBox(
+                height: 20,
+              ),
+              Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      String? imageUrl;
+                      if (_imageFile != null) {
+                        imageUrl = await NoteService.uploadImage(_imageFile!);
+                      } else {
+                        imageUrl = widget.note?.imageUrl;
+                      }
+                      Note note = Note(
+                        id: widget.note?.id,
+                        title: _titleController.text,
+                        description: _descriptionController.text,
+                        imageUrl: imageUrl,
+                        latitude: _currentPosition?.latitude,
+                        longitude: _currentPosition?.longitude,
+                        createdAt: widget.note?.createdAt,
+                      );
+
+                      if (widget.note == null) {
+                        NoteService.addNote(note)
+                            .whenComplete(() => Navigator.of(context).pop());
+                      } else {
+                        NoteService.updateNote(note)
+                            .whenComplete(() => Navigator.of(context).pop());
+                      }
+                    },
+                    child: Text(widget.note == null ? 'Add' : 'Update'),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        ElevatedButton(
-          onPressed: () async {
-            String? imageUrl;
-            if (_imageFile != null) {
-              imageUrl = await NoteService.uploadImage(_imageFile!);
-            }
-            Note note = Note(
-                id: widget.note?.id,
-                title: _titleController.text,
-                description: _descriptionController.text,
-                imageUrl: imageUrl!,
-                createdAt: widget.note?.createdAt);
-            if (widget.note == null) {
-              NoteService.addNote(note).whenComplete(() {
-                Navigator.of(context).pop(); //klo sdh selesai, keluar
-              });
-            } else {
-              NoteService.updateNote(note)
-                  .whenComplete(() => Navigator.of(context).pop());
-            }
-          },
-          child: Text(widget.note == null ? 'Add' : 'Update'),
-        ),
-      ],
+      ),
     );
   }
 }

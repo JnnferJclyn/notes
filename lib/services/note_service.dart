@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:notes/models/note.dart';
 import 'package:path/path.dart' as path;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,7 +17,13 @@ class NoteService {
     try {
       String fileName = path.basename(imageFile.path);
       Reference ref = _storage.ref().child('images/$fileName');
-      UploadTask uploadTask = ref.putFile(imageFile); //upload ke ref yg dituju
+
+      UploadTask uploadTask;
+      if(kIsWeb){
+        uploadTask = ref.putData(await imageFile.readAsBytes()); //upload ke ref yg dituju
+      }else{
+        uploadTask = ref.putFile(imageFile); //upload ke ref yg dituju
+      }
       TaskSnapshot taskSnapshot = await uploadTask;
       String downloadUrl = await taskSnapshot.ref.getDownloadURL();
       return downloadUrl;
